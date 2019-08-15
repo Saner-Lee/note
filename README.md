@@ -1,2 +1,5 @@
-# note-go
-learn about golang
+# note
+
+个人学习笔记。
+
+
