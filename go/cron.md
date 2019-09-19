@@ -1,5 +1,3 @@
-[TOC]
-
 # cron定时任务
 
 基于cron表达式的定时任务框架。`https://godoc.org/github.com/robfig/cron`
@@ -117,7 +115,7 @@ func (c *Cron) Schedule(schedule Schedule, cmd Job) {
 		Schedule: schedule,
 		Job:      cmd,
 	}
-    // 没有run就直接添加到它的entries切片中，否则利用通道传递entry
+    	// 没有run就直接添加到它的entries切片中，否则利用通道传递entry
 	if !c.running {
 		c.entries = append(c.entries, entry)
 		return
@@ -137,14 +135,14 @@ type FuncJob func()
 func (f FuncJob) Run() { f() }
 
 func (c *Cron) AddFunc(spec string, cmd func()) error {
-    // 看似没有什么知识，其实这里的强转设计到了go的Assignability和underlying types
+    	// 看似没有什么知识，其实这里的强转设计到了go的Assignability和underlying types
 	return c.AddJob(spec, FuncJob(cmd))
 }
 ```
 
 ### 监控
 
-监控函数其实是包内的一个私有函数，负则cron的运行，监控cron的行为。
+监控函数其实是包内的一个私有函数，负责cron的运行，监控cron的行为。
 
 ```go
 func (c *Cron) run() {
@@ -161,8 +159,8 @@ func (c *Cron) run() {
 		var timer *time.Timer
 		if len(c.entries) == 0 || c.entries[0].Next.IsZero() {
 			// 如果没有节点就休眠
-            // IsZero可能是因为Schedule对外开放的方法
-            // 使用者如果没有正确实现Schedule接口可能导致任务一直执行
+            		// IsZero可能是因为Schedule对外开放的方法
+            		// 使用者如果没有正确实现Schedule接口可能导致任务一直执行
 			timer = time.NewTimer(100000 * time.Hour)
 		} else {
 			timer = time.NewTimer(c.entries[0].Next.Sub(now))
@@ -174,19 +172,19 @@ func (c *Cron) run() {
 				now = now.In(c.location)
 				// 此时的entries是按照到期时间排序的
 				for _, e := range c.entries {
-                    // 按照顺序处理直到遇到第一个未到期的节点
+                    			// 按照顺序处理直到遇到第一个未到期的节点
 					if e.Next.After(now) || e.Next.IsZero() {
 						break
 					}
-                    // 处理到期的节点
+                    			// 处理到期的节点
 					go c.runWithRecovery(e.Job)
 					e.Prev = e.Next
 					e.Next = e.Schedule.Next(now)
 				}
 
-            // 在select过程中如果执行了添加节点的操作
-            // 关闭定时器，计算到期时间并且添加到entries切片中
-            // 这个信号会导致退出此次select然后回到最外层for循环中重新排序，可能导致任务延期执行
+            		// 在select过程中如果执行了添加节点的操作
+            		// 关闭定时器，计算到期时间并且添加到entries切片中
+            		// 这个信号会导致退出此次select然后回到最外层for循环中重新排序，可能导致任务延期执行
 			case newEntry := <-c.add:
 				timer.Stop()
 				now = c.now()
@@ -197,7 +195,7 @@ func (c *Cron) run() {
 				c.snapshot <- c.entrySnapshot()
 				continue
 
-            // 收到stop信号关闭定时器退出
+            		// 收到stop信号关闭定时器退出
 			case <-c.stop:
 				timer.Stop()
 				return
@@ -245,8 +243,8 @@ func (c *Cron) Stop() {
 func (c *Cron) Entries() []*Entry {
 	if c.running {
 		c.snapshot <- nil
-        // 上面通过sanpshot通道传递给监控函数一个信号
-        // 监控函数接收到信号返回了对切片的一个深拷贝
+        	// 上面通过sanpshot通道传递给监控函数一个信号
+        	// 监控函数接收到信号返回了对切片的一个深拷贝
 		x := <-c.snapshot
 		return x
 	}
