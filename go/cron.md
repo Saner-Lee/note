@@ -144,7 +144,7 @@ func (c *Cron) AddFunc(spec string, cmd func()) error {
 
 ### 监控
 
-监控函数其实是包内的一个私有函数，它应当运行在一个goroutine中。
+监控函数其实是包内的一个私有函数，负则cron的运行，监控cron的行为。
 
 ```go
 func (c *Cron) run() {
