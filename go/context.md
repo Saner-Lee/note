@@ -80,9 +80,9 @@ func (c *cancelCtx) Done() <-chan struct{} {
 // removeFromParent决定了调用cancel的同时是否将自己从父节点中移除
 // 当一个还未被cancel的节点执行cancel操作时，它会递归的取消以自己为根的树中的可取消的上下文
 // 并且这个节点会从树中移除，但是它的子节点不会从父节点移除
-//     1                     		1		3
-//   2   3	after	cancel		   2  	+  6 7			
-//  4 5 6 7                		  4 5
+//     1                     		1	3
+//   2   3	after	cancel	       2    +  6 7			
+//  4 5 6 7                	      4 5
 func (c *cancelCXtx) cancel(removeFromParent bool, err error) {
     // 调用这个函数时err必定非空，因为err描述这个上下文被cancel的原因
     if err == nil {
