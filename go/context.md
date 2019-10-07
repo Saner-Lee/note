@@ -5,9 +5,9 @@
 这篇文章主要记录的是context标准库中WithCancel内部流程。正式阅读之前，需要知道一些知识：
 
 - WithCancel内部是cancelCtx
-
 - WithTimeou和WithDeadline内部是timerCtx，timerCtx包含了一个cancelCtx成员
 - cancelCtx实现了canceler接口，实现了该接口的上下文称作可取消的上下文
+- 其实只有两种上下文，分类的依据是上下文能否取消
 
 ## 结构
 
@@ -77,6 +77,12 @@ func (c *cancelCtx) Done() <-chan struct{} {
 该类型是一个可取消的上下文，最重要的是它的cancel方法，它的功能是取消当前上下文，并递归的对它链条下可取消的上下文统统执行取消操作，解读如下
 
 ```go
+// removeFromParent决定了调用cancel的同时是否将自己从父节点中移除
+// 当一个还未被cancel的节点执行cancel操作时，它会递归的取消以自己为根的树中的可取消的上下文
+// 并且这个节点会从树中移除，但是它的子节点不会从父节点移除
+//     1                     		1	3
+//   2   3	after	cancel	       2    +  6 7			
+//  4 5 6 7                	      4 5
 func (c *cancelCXtx) cancel(removeFromParent bool, err error) {
     // 调用这个函数时err必定非空，因为err描述这个上下文被cancel的原因
     if err == nil {
@@ -140,7 +146,7 @@ func propagateCancel(parent Context, child canceler) {
         p.mu.Lock()
         
         if p.err != nil {
-            // 父节点或祖先节点被cancel，取消child
+            // 父节点或祖先节点已经被cancel，取消child
             child.cancel(false, p.err)
         } else {
             // 父节点或祖先节点未被cancel，添加到返回的上下文对象的孩子列表当中
@@ -150,7 +156,7 @@ func propagateCancel(parent Context, child canceler) {
             p.children[child] = struct{}{}
         }
     } else {
-        // 走到这里证明父节点及祖先节点没有课取消的上下文类型
+        // 走到这里证明父节点及祖先节点没有可取消的上下文类型
         go func() {
             select {
                 // 既然父节点和祖先节点都没有可取消的上下文类型，那么parent的Done方法什么时候可以返回？？？
@@ -262,7 +268,7 @@ func WithDeadline(parent Context, d time.Time) (Context, CancelFunc) {
 
 ## WithTimeout
 
-这个其实是对定时器的一种封装使用，它给出的是一个相对的过期时间，基点事创建时的时间。
+这个其实是对WithDeadline的一种封装使用，它给出的是一个相对的过期时间。
 
 ```go
 func WithTimeout(parent Context, timeout time.Duration) (Context, CancelFunc) {
