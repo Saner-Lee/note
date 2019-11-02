@@ -83,36 +83,36 @@ coroutine_resume(struct schedule * S, int id) {
 	int status = C->status;
 	switch(status) {
 	case COROUTINE_READY:
-        // 这里保存调用resume的协程的上下文
+                // 这里保存调用resume的协程的上下文
 		getcontext(&C->ctx);
-        // 设置上下文的栈地址和栈大小
+                // 设置上下文的栈地址和栈大小
 		C->ctx.uc_stack.ss_sp = S->stack;
 		C->ctx.uc_stack.ss_size = STACK_SIZE;
-        // uc_link代表，当前上下文的逻辑执行完毕后执行uc_link对应的逻辑
+                // uc_link代表，当前上下文的逻辑执行完毕后执行uc_link对应的逻辑
 		C->ctx.uc_link = &S->main;	
 		S->running = id;
 		C->status = COROUTINE_RUNNING;
 		uintptr_t ptr = (uintptr_t)S;
-        // 将协程的上下文的入口地址修改为mainfunc
+                // 将协程的上下文的入口地址修改为mainfunc
 		makecontext(&C->ctx, (void (*)(void)) mainfunc, 2, (uint32_t)ptr, (uint32_t)(ptr>>32));
-        // 当前上下文保存到S->main，恢复C->ctx上下文
-        // 因为上面修改了C->ctx入口地址，因此此时会跳到mainfunc执行
+                // 当前上下文保存到S->main，恢复C->ctx上下文
+                // 因为上面修改了C->ctx入口地址，因此此时会跳到mainfunc执行
 		swapcontext(&S->main, &C->ctx);
-        // 走到这里证明协程中首次调用了yield
+                // 走到这里证明当前协程中首次调用了yield
 		break;
 	case COROUTINE_SUSPEND:
-        // 这个状态代表协程已经执行过了，但是还没有执行完
+                // 这个状态代表当前协程已经执行过了，但是还没有执行完
             
-        // 恢复栈
+                // 恢复栈
 		memcpy(S->stack + STACK_SIZE - C->size, C->stack, C->size);
 		S->running = id;
 		C->status = COROUTINE_RUNNING;
 		
-        // 当前上下文保存到S->main，恢复C->ctx上下文
-        // 此时C->ctx的在yield中最后一行逻辑
-        // 跳出yield回到协程调用yield的地方继续执行协程代码
-        swapcontext(&S->main, &C->ctx);      
-        // 走到这里证明协程再次调用了yield
+                // 当前上下文保存到S->main，恢复C->ctx上下文
+                // 此时C->ctx的在yield中最后一行逻辑
+                // 跳出yield回到协程调用yield的地方继续执行协程代码
+                swapcontext(&S->main, &C->ctx);      
+                // 走到这里证明协程再次调用了yield
 		break;
 	default:
 		assert(0);
