@@ -104,6 +104,7 @@ coroutine_resume(struct schedule * S, int id) {
                 // 这个状态代表当前协程已经执行过了，但是还没有执行完
             
                 // 恢复栈
+	        // 这里减去C->size是考虑协程调用协程的情况
 		memcpy(S->stack + STACK_SIZE - C->size, C->stack, C->size);
 		S->running = id;
 		C->status = COROUTINE_RUNNING;
