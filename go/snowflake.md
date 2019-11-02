@@ -38,7 +38,7 @@ type Snowflake interface {
 	BitLenSequence() uint8
 	BitLenMachineID() uint8
 	BitLenPID() uint8
-    IsInvalid() bool			//用于检查MID和PID是否唯一
+        IsInvalid() bool			//用于检查MID和PID是否唯一
 }
 ```
 
