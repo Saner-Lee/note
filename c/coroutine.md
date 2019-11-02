@@ -126,15 +126,15 @@ coroutine_yield(struct schedule * S) {
 	struct coroutine * C = S->co[id];
 	assert((char *)&C > S->stack);
     
-    // 保存当前栈
+        // 保存当前栈
 	_save_stack(C,S->stack + STACK_SIZE);
 	C->status = COROUTINE_SUSPEND;
 	S->running = -1;
     
-    // 这里swap会保存现场到自己的上下文中，然后恢复到main的上下文
-    // main的上下文就是就是resume函数COROUTINE_READY逻辑的break处
-    // 协程的运行就是由resume触发的，此时恢复到main上下文会跳出resume逻辑
-    // 跳出后手动调用下一个resume
+        // 这里swap会保存现场到自己的上下文中，然后恢复到main的上下文
+        // main的上下文就是就是resume函数COROUTINE_READY逻辑的break处
+        // 协程的运行就是由resume触发的，此时恢复到main上下文会跳出resume逻辑
+        // 跳出后手动调用下一个resume
 	swapcontext(&C->ctx , &S->main);
 }
 ```
