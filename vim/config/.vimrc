@@ -1,10 +1,23 @@
 let g:go_fmt_command = "goimports"
 
+"let g:ale_linters = {
+"            \   'go': ['gopls', 'golint', 'go build'],
+"            \}
+"let g:ale_linters_explicit = 1
+"let g:ale_completion_delay = 200
+"let g:ale_echo_delay = 20
+"let g:ale_lint_delay = 200
+"let g:ale_echo_msg_format = '[%linter%] %code: %%s'
+"let g:ale_lint_on_text_changed = 'normal'
+"let g:ale_lint_on_insert_leave = 1
+"let g:airline#extensions#ale#enabled = 1
+
+set expandtab
 set ts=4 sw=4
-"set cursorcolumn
-"set cursorline
-"highlight CursorLine   cterm=NONE ctermbg=black ctermfg=green guibg=NONE guifg=NONE
-"highlight CursorColumn cterm=NONE ctermbg=black ctermfg=green guibg=NONE guifg=NONE
+set cursorcolumn
+set cursorline
+highlight CursorLine   cterm=NONE ctermbg=black ctermfg=green guibg=NONE guifg=NONE
+highlight CursorColumn cterm=NONE ctermbg=black ctermfg=green guibg=NONE guifg=NONE
 
 map <F2> :NERDTreeMirror<CR>
 map <F2> :NERDTreeToggle<CR>
@@ -28,12 +41,11 @@ Plugin 'majutsushi/tagbar'
 Plugin 'ycm-core/YouCompleteMe'
 Plugin 'jiangmiao/auto-pairs'
 Plugin 'easymotion/vim-easymotion'
-
-nmap ss <Plug>(easymotion-s2)
-
 call vundle#end()
 filetype plugin indent on
 
+
+nmap ss <Plug>(easymotion-s2)
 
 "auth info
 map <F4> :call TitleDet()<cr>
