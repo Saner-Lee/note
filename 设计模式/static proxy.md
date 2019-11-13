@@ -94,8 +94,8 @@ Func2 time : 119ns
 
 ```go
 type ConnProxy interface {
-    Get() *Conn
-    Close(*Conn)
+        Get() *Conn
+        Close(*Conn)
 }
 // 应答方实现了接口，Get就是新建一个tcp,Close就是释放tcp
 
