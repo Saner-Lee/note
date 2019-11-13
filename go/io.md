@@ -90,9 +90,9 @@ func copyBuffer(dst Writer, src Reader, buf []byte) (written int64, err error) {
 		return rt.ReadFrom(src)
 	}
     
-    // 如果外部提供了buffer，则复用，这样外部可以控制每次拷贝的大小
-    // 分配一个拷贝用的buffer
-    // 默认是32k，如果src是LimitedReader，并且大小小于32k，则改变默认大小
+        // 如果外部提供了buffer，则复用，这样外部可以控制每次拷贝的大小
+        // 分配一个拷贝用的buffer
+        // 默认是32k，如果src是LimitedReader，并且大小小于32k，则改变默认大小
 	if buf == nil {
 		size := 32 * 1024
 		if l, ok := src.(*LimitedReader); ok && int64(size) > l.N {
@@ -105,7 +105,7 @@ func copyBuffer(dst Writer, src Reader, buf []byte) (written int64, err error) {
 		buf = make([]byte, size)
 	}
     
-    // 完成src到dst的拷贝
+        // 完成src到dst的拷贝
 	for {
 		nr, er := src.Read(buf)
 		if nr > 0 {
@@ -123,7 +123,7 @@ func copyBuffer(dst Writer, src Reader, buf []byte) (written int64, err error) {
 			}
 		}
         
-        // 这里EOF并不会视为错误，因此发生EOF错误时，err为nil
+                // 这里EOF并不会视为错误，因此发生EOF错误时，err为nil
 		if er != nil {
 			if er != EOF {
 				err = er
@@ -173,11 +173,11 @@ func CopyN(dst Writer, src Reader, n int64) (written int64, err error) {
 // len(buf) > min未发生错误时，n > min
 func ReadAtLeast(r Reader, buf []byte, min int) (n int, err error) {
 	// 参数错误
-    if len(buf) < min {
+        if len(buf) < min {
 		return 0, ErrShortBuffer
 	}
     
-    // 未完成读取任务时继续读取
+        // 未完成读取任务时继续读取
 	for n < min && err == nil {
 		var nn int
 		nn, err = r.Read(buf[n:])
