@@ -1,4 +1,4 @@
-# 责任链模式
+# chain of responsibility
 
 主要分为下述两种：
 

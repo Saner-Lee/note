@@ -198,8 +198,173 @@ func ReadFull(r Reader, buf []byte) (n int, err error) {
 }
 ```
 
+上面都是一些包级的函数，直接调用即可，同时包内还提供了几个可以使用的结构体类型：
+
+- LimitedReader
+- SectionReader
+
+`LimitedReader`限制了每次读取的最大长度，实现如下：
+
+```go
+func LimitReader(r Reader, n int64) Reader { return &LimitedReader{r, n} }
+
+type LimitedReader struct {
+	R Reader // underlying reader
+	N int64  // max bytes remaining
+}
+
+// 如果len(p) <= 0, 返回EOF错误
+// 如果len(p) <= N，正常情况下读取len(p)个字节
+// 如果len(p) > N，缩小p，使len(p) == N，正常情况下读取N个字节
+func (l *LimitedReader) Read(p []byte) (n int, err error) {
+	if l.N <= 0 {
+		return 0, EOF
+	}
+	if int64(len(p)) > l.N {
+		p = p[0:l.N]
+	}
+	n, err = l.R.Read(p)
+	l.N -= int64(n)
+	return
+}
+```
+
+`SectionReader`是可以很好的读取流的类型，它不仅实现了`Reader`，还实现了`ReaderAt`和`Seeker`。
+
+```go
+func NewSectionReader(r ReaderAt, off int64, n int64) *SectionReader {
+	return &SectionReader{r, off, off, off + n}
+}
+
+// SectionReader implements Read, Seek, and ReadAt on a section
+// of an underlying ReaderAt.
+type SectionReader struct {
+	r     ReaderAt
+	base  int64        // 起始位置
+	off   int64        // offset
+	limit int64        // 终止位置
+}
+
+func (s *SectionReader) Read(p []byte) (n int, err error) {
+    // 起始位置大于终止位置，相当于一个空集
+	if s.off >= s.limit {
+		return 0, EOF
+	}
+    
+    // 限制p的长度，防止读取的超过终止位置
+	if max := s.limit - s.off; int64(len(p)) > max {
+		p = p[0:max]
+	}
+    
+    // 读取，更新offset
+	n, err = s.r.ReadAt(p, s.off)
+	s.off += int64(n)
+	return
+}
+
+var errWhence = errors.New("Seek: invalid whence")
+var errOffset = errors.New("Seek: invalid offset")
+
+func (s *SectionReader) Seek(offset int64, whence int) (int64, error) {
+	switch whence {
+	default:
+		return 0, errWhence
+	case SeekStart:
+		offset += s.base
+	case SeekCurrent:
+		offset += s.off
+	case SeekEnd:
+		offset += s.limit
+	}
+    
+    // offset不能小于起始位置
+    // 这里为什么不要求offset不大于终止位置？
+    // 因为Read方法中进行了处理
+	if offset < s.base {
+		return 0, errOffset
+	}
+	s.off = offset
+	return offset - s.base, nil
+}
+
+func (s *SectionReader) ReadAt(p []byte, off int64) (n int, err error) {
+    // ReadAt开始读取的位置是s.base+off，所以要求off<s.limit-s.base
+    // 否则开始读取的位置就超过了终止位置
+	if off < 0 || off >= s.limit-s.base {
+		return 0, EOF
+	}
+	off += s.base
+	if max := s.limit - off; int64(len(p)) > max {
+		p = p[0:max]
+        // 这里为什么读取完后，没有再去读取，就返回EOF
+        // 这其实是Reader和ReaderAt接口定义的不同
+        // ReaderAt中将buf读满后，可以返回err == nil或err == EOF
+        // 这么看来官方更加偏向于读取完后立即返回EOF，而不是等下次调用再返回
+		n, err = s.r.ReadAt(p, off)
+		if err == nil {
+			err = EOF
+		}
+		return n, err
+	}
+	return s.r.ReadAt(p, off)
+}
+
+// Size returns the size of the section in bytes.
+func (s *SectionReader) Size() int64 { return s.limit - s.base }
+```
+
+如果上面两个类型觉得可用的场景不太多，我觉得另外两个结构应该算比较好的，可以使得多个`Reader`或者`Writer`操作起来很简洁，这两个结构体分别是：
+
+- multiReader
+- multiWriter
+
+`multiReader`实现了`Reader`接口，使用`MultiReader`函数将多个`Reader`合并成一个`Reader`，这样可以当做在操作一个`Reader`。
+
+```go
+type eofReader struct{}
+
+func (eofReader) Read([]byte) (int, error) {
+	return 0, EOF
+}
+
+type multiReader struct {
+	readers []Reader
+}
+
+// 只有所有reader都被读取完后才会返回EOF
+func (mr *multiReader) Read(p []byte) (n int, err error) {
+	for len(mr.readers) > 0 {
+		// Optimization to flatten nested multiReaders (Issue 13558).
+		if len(mr.readers) == 1 {
+			if r, ok := mr.readers[0].(*multiReader); ok {
+				mr.readers = r.readers
+				continue
+			}
+		}
+		n, err = mr.readers[0].Read(p)
+		if err == EOF {
+			// Use eofReader instead of nil to avoid nil panic
+			// after performing flatten (Issue 18232).
+			mr.readers[0] = eofReader{} // permit earlier GC
+			mr.readers = mr.readers[1:]
+		}
+		if n > 0 || err != EOF {
+			if err == EOF && len(mr.readers) > 0 {
+				// Don't return EOF yet. More readers remain.
+				err = nil
+			}
+			return
+		}
+	}
+	return 0, EOF
+}
+```
+
+又有了可以学习的地方了，在`readers[0]`的内容读取完毕后，会缩小`slice`的范围，这时候将丢弃的`slice`部分赋值为一个可复用的值，这样原来的`Reader`会尽早被回收（这里不清楚的一点就是，不清楚`slice`缩容的垃圾回收机制是怎样的，日后阅读相关知识后会更新）。
+
 最后，还有一点在注释方面值得学习的地方，也是当前`golang`的规范：
 
 - 方法或者函数的注释，都以方法名或者函数名开始
-
 - 包的包注释应当使用c注释风格，且应该出现在第一个文件的顶部
+
+了解了`io`包之后，以后有关于`io`操作的封装，一定要知道其中都有哪些接口可以供我们使用，`copuBuffer`的实现就很好的诠释了这一点。
