@@ -50,12 +50,12 @@ nmap ss <Plug>(easymotion-s2)
 "auth info
 map <F4> :call TitleDet()<cr>
 function AddTitle()
-	call append(0,"# ******************************************************")
-	call append(1,"# Author       : litianxiang")
-	call append(2,"# Last modified: ".strftime("%Y-%m-%d %H:%M"))
-	call append(3,"# Email        : crrealmadrid@hotmail.com")
-	call append(4,"# Filename     : ".expand("%:t"))
-	call append(5,"# ******************************************************")
+	call append(0,"// # ******************************************************")
+	call append(1,"// # Author       : litianxiang")
+	call append(2,"// # Last modified: ".strftime("%Y-%m-%d %H:%M"))
+	call append(3,"// # Email        : crrealmadrid@hotmail.com")
+	call append(4,"// # Filename     : ".expand("%:t"))
+	call append(5,"// # ******************************************************")
 	echohl WarningMsg | echo "Successful in adding copyright." | echohl None
 endf
 
