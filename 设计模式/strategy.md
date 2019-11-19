@@ -46,6 +46,7 @@ type Alibaba struct{}
 func (pm *Alibaba) Pay(money float64) {
 	fmt.Printf("Ali earned %.2f RMB\n", money)
 }
+
 func main() {
 	lyh := NewClient("liyanhong", new(Alibaba))
 	lyh.Cost(12345.67)
@@ -53,6 +54,11 @@ func main() {
 	lyh.SetPayment(new(Tencent))
 	lyh.Cost(76543.21)
 }
+// output :
+// liyanhong cost 12345.67 RMB
+// Ali earned 12345.67 RMB
+// liyanhong cost 76543.21 RMB
+// tencent earned 76543.21 RMB
 ```
 
 
